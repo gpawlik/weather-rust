@@ -53,12 +53,19 @@ fn get_forecasts() -> Result<Vec<WeatherData>, Error> {
 
 fn show_forecast(data: Vec<WeatherData>) {
     for item in data {
-        println!("Date: {:?}", item.Date);
-        println!("Max. Temp: {:?}C", f_to_c(item.Temperature.Maximum.Value));
-        println!("Min. Temp: {:?}C", f_to_c(item.Temperature.Minimum.Value));
+        println!("Date: {:?}", format_date(&item.Date));
+        println!("Max: {:?}C", f_to_c(item.Temperature.Maximum.Value));
+        println!("Min: {:?}C", f_to_c(item.Temperature.Minimum.Value));
     }
 }
 
 fn f_to_c(temp: f32) -> f32 {
     (temp - 30.0) / 2.0
+}
+
+fn format_date(date_string: &String) -> String {
+    let mut split = date_string[..10].split("-"); 
+    let split_vec = split.collect::<Vec<&str>>();
+
+    split_vec[2].to_owned() + "/" + split_vec[1]
 }
