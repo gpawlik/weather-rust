@@ -1,60 +1,64 @@
-#![deny(warnings)]
-extern crate hyper;
-extern crate pretty_env_logger;
+#![allow(non_snake_case)]
+#[macro_use]
+extern crate serde;
+extern crate serde_derive;
+extern crate reqwest;
+use reqwest::Error;
 
-use std::io::{self, Write};
-
-use hyper::Client;
-use hyper::rt::{self, Future, Stream};
-
-// Porto: 275317
-
-fn main() {
-    pretty_env_logger::init();
-
-    // Some simple CLI args requirements...
-    let url = "http://dataservice.accuweather.com/forecasts/v1/daily/5day/275317?apikey=z6em40OIbyDIxJKnVLydnBndRkGNNtvN";
-
-    // HTTPS requires picking a TLS implementation, so give a better
-    // warning if the user tries to request an 'https' URL.
-    let url = url.parse::<hyper::Uri>().unwrap();
-    if url.scheme_part().map(|s| s.as_ref()) != Some("http") {
-        println!("This example only works with 'http' URLs.");
-        return;
-    }
-
-    // Run the runtime with the future trying to fetch and print this URL.
-    //
-    // Note that in more complicated use cases, the runtime should probably
-    // run on its own, and futures should just be spawned into it.
-    rt::run(fetch_url(url));
+#[derive(Deserialize, Debug)]
+struct Data {
+    DailyForecasts: Vec<WeatherData>,
 }
 
-fn fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
-    let client = Client::new();
+#[derive(Deserialize, Debug)]
+struct WeatherData {
+    Date: String,
+    Temperature: Temperature,
+}
+#[derive(Deserialize, Debug)]
+struct Temperature {
+    Minimum: TempData,
+    Maximum: TempData,
+}
+#[derive(Deserialize, Debug)]
+struct TempData {
+    Value: f32,
+    Unit: String,
+}
 
-    client
-        // Fetch the url...
-        .get(url)
-        // And then, if we get a response back...
-        .and_then(|res| {
-            println!("Response: {}", res.status());
-            println!("Headers: {:#?}", res.headers());
 
-            // The body is a stream, and for_each returns a new Future
-            // when the stream is finished, and calls the closure on
-            // each chunk of the body...
-            res.into_body().for_each(|chunk| {
-                io::stdout().write_all(&chunk)
-                    .map_err(|e| panic!("example expects stdout is open, error={}", e))
-            })
-        })
-        // If all good, just tell the user...
-        .map(|_| {
-            println!("\n\nDone.");
-        })
-        // If there was an error, let the user know...
-        .map_err(|err| {
-            eprintln!("Error {}", err);
-        })
+fn main() {
+    let forecasts = get_forecasts();
+    
+    match forecasts {
+        Ok(res) => show_forecast(res),
+        Err(e) => println!("Error happened: {}", e),
+    };
+}
+
+fn get_forecasts() -> Result<Vec<WeatherData>, Error> {
+    // let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
+    //     location_id = "275317",
+    //     apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
+    let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/db");
+    println!("Request: {}", request_url);
+
+    let mut response = reqwest::get(&request_url)?;
+
+    let data: Data = response.json()?;
+    let forecasts: Vec<WeatherData> = data.DailyForecasts;
+    
+    Ok(forecasts)
+}
+
+fn show_forecast(data: Vec<WeatherData>) {
+    for item in data {
+        println!("Date: {:?}", item.Date);
+        println!("Max. Temp: {:?}C", f_to_c(item.Temperature.Maximum.Value));
+        println!("Min. Temp: {:?}C", f_to_c(item.Temperature.Minimum.Value));
+    }
+}
+
+fn f_to_c(temp: f32) -> f32 {
+    (temp - 30.0) / 2.0
 }
