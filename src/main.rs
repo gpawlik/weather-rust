@@ -28,6 +28,10 @@ struct TempData {
     Value: f32,
     Unit: String,
 }
+struct LocationData {
+    name: String,
+    data: Result<Vec<WeatherData>, Error>,
+}
 
 struct Location {
     id: i32,
@@ -35,33 +39,69 @@ struct Location {
 }
 
 fn main() {
-    // let table = table!(["ABC", "DEFG", "HIJKLMN"],
-    //                    ["foobar", "bar", "foo"],
-    //                    ["foobar2", "bar2", "foo2"]);
-
-    // table.printstd();
-
     let locations = vec![
         Location { id: 275317, name: String::from("Porto") },
-        Location { id: 273200, name: String::from("Albufeira") }
+        Location { id: 273200, name: String::from("Albufeira") },
+        Location { id: 311399, name: String::from("Colombo") },
     ];
 
+    let mut allResults = Vec::new();
+
     for location in locations {
-       let forecasts = get_forecasts(&location.id);
-       println!("{}", location.name);
-    
-        match forecasts {
-            Ok(res) => show_forecast(res),
+        allResults.push(LocationData {
+           name: location.name,
+           data: get_forecasts(&location.id)
+        });
+    }
+
+    print(allResults);
+}
+
+fn print(location_data: Vec<LocationData>) {
+    let mut table = Table::new();
+    let mut first_row = vec![Cell::new("Data")];
+
+    // Create first row
+    for forecast in &location_data {
+        first_row.push(Cell::new(&forecast.name));
+    }
+    table.add_row(Row::new(first_row));
+
+    // Create rest of the rows
+    for forecast in location_data {
+        match forecast.data {
+            Ok(res) => print_row(res, &mut table),
             Err(e) => println!("Error happened: {}", e),
-        }; 
-    } 
+        };
+    }
+        
+    table.printstd();
+}
+
+fn print_row(data: Vec<WeatherData>, table: &mut prettytable::Table) {
+    for (i, item) in data.iter().enumerate() {
+        let date = format_date(&item.Date);
+        let temp = f_to_c(item.Temperature.Maximum.Value).to_string() + "/" + &f_to_c(item.Temperature.Minimum.Value).to_string();
+        // +1 because of header row
+        let current_row_index = i + 1;
+        let current_row = table.get_row(current_row_index);
+
+        match current_row {
+            None => {
+                table.add_row(row![date, temp]);
+            },
+            Some(_row) => {
+                table[current_row_index].add_cell(Cell::new(&temp));
+            },
+        }
+    }
 }
 
 fn get_forecasts(id: &i32) -> Result<Vec<WeatherData>, Error> {
-    // let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
-    //     location_id = id,
-    //     apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
-    let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
+    let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
+        location_id = id,
+        apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
+    //let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
     println!("Request: {}", request_url);
 
     let mut response = reqwest::get(&request_url)?;
@@ -70,17 +110,6 @@ fn get_forecasts(id: &i32) -> Result<Vec<WeatherData>, Error> {
     let forecasts: Vec<WeatherData> = data.DailyForecasts;
     
     Ok(forecasts)
-}
-
-fn show_forecast(data: Vec<WeatherData>) {
-    let mut table = Table::new();
-    table.add_row(row!["Date", "Porto"]);
-
-    for item in data {
-        table.add_row(row![format_date(&item.Date), f_to_c(item.Temperature.Maximum.Value).to_string() + "/" + &f_to_c(item.Temperature.Minimum.Value).to_string()]);
-    }
-
-    table.printstd();
 }
 
 fn f_to_c(temp: f32) -> f32 {
