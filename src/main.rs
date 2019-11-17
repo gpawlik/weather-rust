@@ -6,7 +6,7 @@ extern crate reqwest;
 #[macro_use] extern crate prettytable;
 
 use reqwest::Error;
-use prettytable::{Table, Row, Cell};
+use prettytable::{Table, Row, Cell, Attr, color};
 
 #[derive(Deserialize, Debug)]
 struct Data {
@@ -60,11 +60,11 @@ fn main() {
 
 fn print(location_data: Vec<LocationData>) {
     let mut table = Table::new();
-    let mut first_row = vec![Cell::new("Data")];
+    let mut first_row = vec![Cell::new("Data").with_style(Attr::Bold)];
 
     // Create first row
     for forecast in &location_data {
-        first_row.push(Cell::new(&forecast.name));
+        first_row.push(Cell::new(&forecast.name).with_style(Attr::Bold));
     }
     table.add_row(Row::new(first_row));
 
@@ -92,7 +92,7 @@ fn print_row(data: Vec<WeatherData>, table: &mut prettytable::Table) {
 
         match current_row {
             None => {
-                table.add_row(row![date, temp]);
+                table.add_row(Row::new(vec![Cell::new(&date).with_style(Attr::Bold), Cell::new(&temp)]));
             },
             Some(_row) => {
                 table[current_row_index].add_cell(Cell::new(&temp));
@@ -103,7 +103,7 @@ fn print_row(data: Vec<WeatherData>, table: &mut prettytable::Table) {
 
 fn print_empty_row(table: &mut prettytable::Table) {
     for i in 1..table.len() {
-        table[i].add_cell(Cell::new("N/A"));
+        table[i].add_cell(Cell::new("N/A").with_style(Attr::ForegroundColor(color::RED)));
     }
 }
 
