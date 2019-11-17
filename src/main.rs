@@ -3,7 +3,10 @@
 extern crate serde;
 extern crate serde_derive;
 extern crate reqwest;
+#[macro_use] extern crate prettytable;
+
 use reqwest::Error;
+use prettytable::{Table, Row, Cell};
 
 #[derive(Deserialize, Debug)]
 struct Data {
@@ -32,6 +35,12 @@ struct Location {
 }
 
 fn main() {
+    // let table = table!(["ABC", "DEFG", "HIJKLMN"],
+    //                    ["foobar", "bar", "foo"],
+    //                    ["foobar2", "bar2", "foo2"]);
+
+    // table.printstd();
+
     let locations = vec![
         Location { id: 275317, name: String::from("Porto") },
         Location { id: 273200, name: String::from("Albufeira") }
@@ -39,6 +48,7 @@ fn main() {
 
     for location in locations {
        let forecasts = get_forecasts(&location.id);
+       println!("{}", location.name);
     
         match forecasts {
             Ok(res) => show_forecast(res),
@@ -48,10 +58,10 @@ fn main() {
 }
 
 fn get_forecasts(id: &i32) -> Result<Vec<WeatherData>, Error> {
-    let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
-        location_id = id,
-        apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
-    //let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/db?{}", &id);
+    // let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
+    //     location_id = id,
+    //     apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
+    let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
     println!("Request: {}", request_url);
 
     let mut response = reqwest::get(&request_url)?;
@@ -63,11 +73,14 @@ fn get_forecasts(id: &i32) -> Result<Vec<WeatherData>, Error> {
 }
 
 fn show_forecast(data: Vec<WeatherData>) {
+    let mut table = Table::new();
+    table.add_row(row!["Date", "Porto"]);
+
     for item in data {
-        println!("Date: {:?}", format_date(&item.Date));
-        println!("Max: {:?}C", f_to_c(item.Temperature.Maximum.Value));
-        println!("Min: {:?}C", f_to_c(item.Temperature.Minimum.Value));
+        table.add_row(row![format_date(&item.Date), f_to_c(item.Temperature.Maximum.Value).to_string() + "/" + &f_to_c(item.Temperature.Minimum.Value).to_string()]);
     }
+
+    table.printstd();
 }
 
 fn f_to_c(temp: f32) -> f32 {
