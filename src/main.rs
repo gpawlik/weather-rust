@@ -43,6 +43,7 @@ fn main() {
         Location { id: 275317, name: String::from("Porto") },
         Location { id: 273200, name: String::from("Albufeira") },
         Location { id: 311399, name: String::from("Colombo") },
+        
     ];
 
     let mut allResults = Vec::new();
@@ -71,7 +72,10 @@ fn print(location_data: Vec<LocationData>) {
     for forecast in location_data {
         match forecast.data {
             Ok(res) => print_row(res, &mut table),
-            Err(e) => println!("Error happened: {}", e),
+            Err(e) => {
+                println!("Error happened: {}", e);
+                print_empty_row(&mut table);
+            },
         };
     }
         
@@ -97,11 +101,17 @@ fn print_row(data: Vec<WeatherData>, table: &mut prettytable::Table) {
     }
 }
 
+fn print_empty_row(table: &mut prettytable::Table) {
+    for i in 1..table.len() {
+        table[i].add_cell(Cell::new("N/A"));
+    }
+}
+
 fn get_forecasts(id: &i32) -> Result<Vec<WeatherData>, Error> {
-    let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
-        location_id = id,
-        apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
-    //let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
+    // let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
+    //     location_id = id,
+    //     apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
+    let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
     println!("Request: {}", request_url);
 
     let mut response = reqwest::get(&request_url)?;
