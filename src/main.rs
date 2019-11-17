@@ -3,7 +3,7 @@
 extern crate serde;
 extern crate serde_derive;
 extern crate reqwest;
-#[macro_use] extern crate prettytable;
+extern crate prettytable;
 
 use reqwest::Error;
 use prettytable::{Table, Row, Cell, Attr, color};
@@ -57,6 +57,7 @@ fn get_location_id(location: &String) -> i32 {
         "albufeira" => 273200,
         "colombo" => 311399,
         "barcelona" => 307297,
+        "nysa" => 265168,
         _ => 0
     }
 }
