@@ -7,6 +7,7 @@ extern crate reqwest;
 
 use reqwest::Error;
 use prettytable::{Table, Row, Cell, Attr, color};
+use std::env;
 
 #[derive(Deserialize, Debug)]
 struct Data {
@@ -33,34 +34,36 @@ struct LocationData {
     data: Result<Vec<WeatherData>, Error>,
 }
 
-struct Location {
-    id: i32,
-    name: String,
-}
-
 fn main() {
-    let locations = vec![
-        Location { id: 275317, name: String::from("Porto") },
-        Location { id: 273200, name: String::from("Albufeira") },
-        Location { id: 311399, name: String::from("Colombo") },
-        
-    ];
-
+    let args: Vec<String> = env::args().collect();
     let mut allResults = Vec::new();
 
-    for location in locations {
+    // TODO: remove the first item of args in a cleaner way.
+    for (i, location) in args.iter().enumerate() {
+        if i == 0 { continue };
+
         allResults.push(LocationData {
-           name: location.name,
-           data: get_forecasts(&location.id)
+           name: location.to_string(),
+           data: get_forecasts(&get_location_id(location))
         });
     }
 
     print(allResults);
 }
 
+fn get_location_id(location: &String) -> i32 {
+    match &location[..] {
+        "porto" => 275317,
+        "albufeira" => 273200,
+        "colombo" => 311399,
+        "barcelona" => 307297,
+        _ => 0
+    }
+}
+
 fn print(location_data: Vec<LocationData>) {
     let mut table = Table::new();
-    let mut first_row = vec![Cell::new("Data").with_style(Attr::Bold)];
+    let mut first_row = vec![Cell::new("").with_style(Attr::Bold)];
 
     // Create first row
     for forecast in &location_data {
@@ -108,10 +111,10 @@ fn print_empty_row(table: &mut prettytable::Table) {
 }
 
 fn get_forecasts(id: &i32) -> Result<Vec<WeatherData>, Error> {
-    // let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
-    //     location_id = id,
-    //     apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
-    let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
+    let request_url = format!("http://dataservice.accuweather.com/forecasts/v1/daily/5day/{location_id}?apikey={apikey}",
+        location_id = id,
+        apikey = "z6em40OIbyDIxJKnVLydnBndRkGNNtvN");
+    //let request_url = format!("https://my-json-server.typicode.com/gpawlik/weather-rust/{}", &id);
     println!("Request: {}", request_url);
 
     let mut response = reqwest::get(&request_url)?;
